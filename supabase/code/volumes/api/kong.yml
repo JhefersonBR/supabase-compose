@@ -39,7 +39,7 @@ services:
     url: http://auth:9999/verify
     routes:
       - name: auth-v1-open
-        strip_path: true
+        strip_path: false
         paths:
           - /auth/v1/verify
     plugins:
