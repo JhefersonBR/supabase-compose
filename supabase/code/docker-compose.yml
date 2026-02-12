@@ -384,7 +384,7 @@ services:
       vector:
         condition: service_healthy
     ports:
-      -5432:5432
+      - 5432:5432
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}
