@@ -136,68 +136,6 @@ BEGIN;
     END IF;
   END
   $$;
-  -- pg_net grants when extension is already enabled
-  DO
-  $$
-  BEGIN
-    IF EXISTS (
-      SELECT 1
-      FROM pg_extension
-      WHERE extname = 'pg_net'
-    )
-    THEN
-      GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
-      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
-      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
-      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
-      REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
-      REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
-      GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-      GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-    END IF;
-  END
-  $$;
-  -- Event trigger for pg_net
-  CREATE OR REPLACE FUNCTION extensions.grant_pg_net_access()
-  RETURNS event_trigger
-  LANGUAGE plpgsql
-  AS $$
-  BEGIN
-    IF EXISTS (
-      SELECT 1
-      FROM pg_event_trigger_ddl_commands() AS ev
-      JOIN pg_extension AS ext
-      ON ev.objid = ext.oid
-      WHERE ext.extname = 'pg_net'
-    )
-    THEN
-      GRANT USAGE ON SCHEMA net TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
-      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SECURITY DEFINER;
-      ALTER function net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
-      ALTER function net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) SET search_path = net;
-      REVOKE ALL ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
-      REVOKE ALL ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) FROM PUBLIC;
-      GRANT EXECUTE ON FUNCTION net.http_get(url text, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-      GRANT EXECUTE ON FUNCTION net.http_post(url text, body jsonb, params jsonb, headers jsonb, timeout_milliseconds integer) TO supabase_functions_admin, postgres, anon, authenticated, service_role;
-    END IF;
-  END;
-  $$;
-  COMMENT ON FUNCTION extensions.grant_pg_net_access IS 'Grants access to pg_net';
-  DO
-  $$
-  BEGIN
-    IF NOT EXISTS (
-      SELECT 1
-      FROM pg_event_trigger
-      WHERE evtname = 'issue_pg_net_access'
-    ) THEN
-      CREATE EVENT TRIGGER issue_pg_net_access ON ddl_command_end WHEN TAG IN ('CREATE EXTENSION')
-      EXECUTE PROCEDURE extensions.grant_pg_net_access();
-    END IF;
-  END
-  $$;
   INSERT INTO supabase_functions.migrations (version) VALUES ('20210809183423_update_grants');
   ALTER function supabase_functions.http_request() SECURITY DEFINER;
   ALTER function supabase_functions.http_request() SET search_path = supabase_functions;
