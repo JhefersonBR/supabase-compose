@@ -91,9 +91,8 @@ services:
       interval: 5s
       retries: 3
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       analytics:
         condition: service_healthy
     environment:
@@ -160,9 +159,8 @@ services:
     image: postgrest/postgrest:v12.2.12
     restart: unless-stopped
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       analytics:
         condition: service_healthy
     environment:
@@ -180,9 +178,8 @@ services:
     image: supabase/realtime:v2.34.47
     restart: unless-stopped
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       analytics:
         condition: service_healthy
     healthcheck:
@@ -239,9 +236,8 @@ services:
       interval: 5s
       retries: 3
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       rest:
         condition: service_started
       imgproxy:
@@ -282,9 +278,8 @@ services:
     image: supabase/postgres-meta:v0.91.0
     restart: unless-stopped
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       analytics:
         condition: service_healthy
     environment:
@@ -328,9 +323,8 @@ services:
       interval: 5s
       retries: 10
     depends_on:
-      db:
-        # Disable this if you are using an external Postgres database
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     environment:
       LOGFLARE_NODE_HOST: 127.0.0.1
       DB_USERNAME: supabase_admin
@@ -354,54 +348,26 @@ services:
       # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
 
       # Comment out everything below this point if you are using an external Postgres database
-  db:
+  db-init:
     image: supabase/postgres:15.8.1.060
-    restart: unless-stopped
+    restart: "no"
     volumes:
-      - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
-      # Must be superuser to create event trigger
-      - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
-      # Must be superuser to alter reserved role
-      - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
-      # Initialize the database settings with JWT_SECRET and JWT_EXP
-      - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
-      # PGDATA directory is persisted between restarts
-      - ./volumes/db/data:/var/lib/postgresql/data:Z
-      # Changes required for internal supabase data such as _analytics
-      - ./volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
-      # Changes required for Analytics support
-      - ./volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
-      # Changes required for Pooler support
-      - ./volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
-      # Use named volume to persist pgsodium decryption key between restarts
-      - db-config:/etc/postgresql-custom
-    healthcheck:
-      test: [ "CMD", "pg_isready", "-U", "postgres", "-h", "localhost" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    depends_on:
-      vector:
-        condition: service_healthy
-    ports:
-      - 5432:5432
+      - ./volumes/db:/db:ro,z
     environment:
-      POSTGRES_HOST: /var/run/postgresql
+      PGHOST: ${POSTGRES_HOST}
       PGPORT: ${POSTGRES_PORT}
-      POSTGRES_PORT: ${POSTGRES_PORT}
+      PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
     command:
       [
-        "postgres",
+        "bash",
         "-c",
-        "config_file=/etc/postgresql/postgresql.conf",
-        "-c",
-        "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
+        "until pg_isready -h \"$PGHOST\" -p \"$PGPORT\" -U \"$PGUSER\"; do sleep 1; done && psql -v ON_ERROR_STOP=1 -f /db/_supabase.sql && psql -v ON_ERROR_STOP=1 -f /db/logs.sql && psql -v ON_ERROR_STOP=1 -f /db/pooler.sql && psql -v ON_ERROR_STOP=1 -f /db/realtime.sql && psql -v ON_ERROR_STOP=1 -f /db/webhooks.sql && psql -v ON_ERROR_STOP=1 -f /db/roles.sql && psql -v ON_ERROR_STOP=1 -f /db/jwt.sql"
       ]
 
   vector:
@@ -450,8 +416,8 @@ services:
       timeout: 5s
       retries: 5
     depends_on:
-      db:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
       analytics:
         condition: service_healthy
     environment:
@@ -481,4 +447,3 @@ services:
       ]
 
 volumes:
-  db-config:
