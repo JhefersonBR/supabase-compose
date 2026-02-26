@@ -346,6 +346,7 @@ services:
       # Uncomment to use Big Query backend for analytics
       # GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID}
       # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
+    command: [ "/bin/sh", "-c", "/app/bin/migrate && /app/bin/server" ]
 
       # Comment out everything below this point if you are using an external Postgres database
   db-init:
