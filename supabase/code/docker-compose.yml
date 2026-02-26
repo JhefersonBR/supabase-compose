@@ -354,20 +354,18 @@ services:
     volumes:
       - ./volumes/db:/db:ro,z
     environment:
-      PGHOST: ${POSTGRES_HOST}
-      PGPORT: ${POSTGRES_PORT}
-      PGUSER: ${POSTGRES_USER}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-      PGDATABASE: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
     command:
       [
         "bash",
         "-c",
-        "until pg_isready -h \"$PGHOST\" -p \"$PGPORT\" -U \"$PGUSER\"; do sleep 1; done && psql -v ON_ERROR_STOP=1 -f /db/_supabase.sql && psql -v ON_ERROR_STOP=1 -f /db/logs.sql && psql -v ON_ERROR_STOP=1 -f /db/pooler.sql && psql -v ON_ERROR_STOP=1 -f /db/realtime.sql && psql -v ON_ERROR_STOP=1 -f /db/webhooks.sql && psql -v ON_ERROR_STOP=1 -f /db/roles.sql && psql -v ON_ERROR_STOP=1 -f /db/jwt.sql"
+        "until pg_isready -d \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\"; do sleep 1; done && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/_supabase.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/logs.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/pooler.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/realtime.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/webhooks.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/roles.sql && psql \"postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB\" -v ON_ERROR_STOP=1 -f /db/jwt.sql"
       ]
 
   vector:
@@ -446,4 +444,3 @@ services:
           /etc/pooler/pooler.exs)\" && /app/bin/server"
       ]
 
-volumes:
